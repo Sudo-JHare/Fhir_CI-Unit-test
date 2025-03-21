@@ -1,0 +1,58 @@
+name: Setup HAPI, UploadFIG, and Build Test Data Client
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-hapi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Pull and Run HAPI FHIR Server
+        run: |
+          docker pull hapiproject/hapi:latest
+          docker run -d -p 8080:8080 hapiproject/hapi:latest
+          echo "Waiting for HAPI FHIR server to be ready..."
+          until curl --silent --fail http://localhost:8080/fhir/metadata; do
+            echo "Waiting..."
+            sleep 10
+          done
+          echo "HAPI FHIR Server is running."
+
+  deploy-uploadfig:
+    needs: deploy-hapi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Clone UploadFIG Repository
+        run: |
+          git clone https://github.com/brianpos/UploadFIG.git
+          cd UploadFIG
+          dotnet build
+
+      - name: Run UploadFIG
+        run: |
+          cd UploadFIG
+          dotnet run --pid hl7.fhir.au.core --pv 1.1.0-preview -d http://10.39.88.79:8080/fhir \
+          --includeReferencedDependencies -reg https://api.healthterminologies.gov.au/integration/R4/fhir
+
+  build-test-data-client:
+    needs: deploy-uploadfig
+    runs-on: windows-latest
+    steps:
+      - name: Clone HL7 AU FHIR Test Data Utils
+        run: git clone https://github.com/hl7au/au-fhir-test-data-utils.git
+
+      - name: Build Test Data Client
+        run: |
+          cd au-fhir-test-data-utils
+          ./BuildTestDataClient.bat
