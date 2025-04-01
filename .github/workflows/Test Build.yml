@@ -1,0 +1,78 @@
+name: Deploy HAPI FHIR Server, Load IG and Test Data
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ig_repo:
+        description: 'IG Repository (e.g., hl7au/au-fhir-ig)'
+        required: false
+        default: 'hl7au/au-fhir-ig'
+      test_data_repo:
+        description: 'Test Data Repository (e.g., hl7au/au-fhir-test-data)'
+        required: false
+        default: 'hl7au/au-fhir-test-data'
+
+jobs:
+  deploy_and_load:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '17' ]
+    env:
+      HAPI_VERSION: 6.5.1
+      IG_REPO: ${{ github.event.inputs.ig_repo }}
+      TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+
+      - name: Start HAPI FHIR Server
+        run: |
+          docker run -d -p 8080:8080 -e HAPI_FHIR_VERSION=${HAPI_VERSION} hapiproject/hapi-fhir-jpaserver:r4
+
+      - name: Wait for HAPI FHIR Server to start
+        run: |
+          sleep 10
+          curl --fail http://localhost:8080/fhir/metadata
+
+      - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x' # Specify the .NET version you need
+
+      - name: Install UploadFIG
+        run: |
+          dotnet tool install --global UploadFIG
+
+      - name: Clone IG Repository
+        run: |
+          git clone https://github.com/${{ env.IG_REPO }}.git ig_repo
+
+      - name: Upload IG using UploadFIG
+        run: |
+          uploadfig -p ig_repo/package -s http://localhost:8080/fhir
+
+      - name: Clone Test Data
+        run: |
+          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
+
+      - name: Load Test Data
+        run: |
+          java -jar hapi-fhir-cli.jar upload-files -d test_data/au-fhir-test-data-set/ -s http://localhost:8080/fhir
+
+      - name: Verify Test Data Loaded (Example, adjust as needed)
+        run: |
+          curl http://localhost:8080/fhir/Patient
