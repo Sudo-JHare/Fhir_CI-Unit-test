@@ -148,13 +148,22 @@ jobs:
           chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
 
           # Construct absolute directory path
-          DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
+          #DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
 
           # Debug: Print the command
           echo "Executing: ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory $DATA_DIR"
 
-          # Run the TestDataClient to load data with absolute path and quoting
-          "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "--server" "http://localhost:8080/fhir" "--directory" "$DATA_DIR"
+          # Define the resource types
+          items=("Patient" "HealthcareService" "Organization" "Location" "Practitioner" "PractitionerRole" "RelatedPerson" "Encounter" "AllergyIntolerance" "Condition" "Immunization" "Procedure" "Observation" "Medication" "MedicationRequest" "MedicationStatement" "Coverage" "Specimen" "CommunicationRequest" "Consent" "ServiceRequest" "Task")
+
+          # Loop through each resource type and call TestDataClient
+          for item in "${items[@]}"; do
+            echo "Loading data for: $item"
+            "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "$item" "$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/" "http://localhost:8080/fhir" "basic" "default"
+          done
+
+        env:
+          GH_TOKEN: ${{ github.token }}
 
         env:
           GH_TOKEN: ${{ github.token }}
