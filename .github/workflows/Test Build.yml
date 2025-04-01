@@ -147,8 +147,15 @@ jobs:
           # Make the executable inside the zip executable (assuming it's in the 'TestDataClient-linux-x64-binaries' subdirectory)
           chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
 
-          # Run the TestDataClient to load data
-          ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/
+          # Construct absolute directory path
+          DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
+
+          # Debug: Print the command
+          echo "Executing: ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory $DATA_DIR"
+
+          # Run the TestDataClient to load data with absolute path and quoting
+          "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "--server" "http://localhost:8080/fhir" "--directory" "$DATA_DIR"
+
         env:
           GH_TOKEN: ${{ github.token }}
 
