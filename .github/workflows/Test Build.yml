@@ -165,9 +165,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Verify Test Data Loaded (Example, adjust as needed)
         run: |
           curl http://localhost:8080/fhir/Patient
