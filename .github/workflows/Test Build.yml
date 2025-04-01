@@ -103,23 +103,39 @@ jobs:
 
       - name: Load Test Data
         run: |
-          # Clone the test data utils repository
-          git clone https://github.com/hl7au/au-fhir-test-data-utils.git test_data_utils
+          # Install GitHub CLI and unzip
+          sudo apt-get update
+          sudo apt-get install -y gh unzip
 
-          # Navigate to the Sparked.TestDataClient directory
-          cd test_data_utils/Sparked.TestDataClient
+          # Clone the test data repository
+          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
 
-          # Restore dependencies
-          dotnet restore
+          # Get the latest release from au-fhir-test-data-utils
+          LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
 
-          # Build for Linux
-          dotnet publish -c Release -r linux-x64 --self-contained false -o out
+          # Find the Linux zip asset URL
+          ASSET_URL=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq -r '.assets[] | select(.name | contains("TestDataClient-linux-x64.zip")) | .browser_download_url')
 
-          # Navigate back to the main directory
-          cd ../../
+          # Check if an asset URL was found
+          if [ -z "$ASSET_URL" ]; then
+            echo "Error: No Linux zip found in the latest release ($LATEST_RELEASE)"
+            exit 1
+          fi
 
-          # Use the compiled TestDataClient to load data
-          test_data_utils/Sparked.TestDataClient/out/Sparked.TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/
+          # Download the zip
+          wget $ASSET_URL -O TestDataClient.zip
+
+          # Create a directory for extraction
+          mkdir TestDataClientDir
+
+          # Extract the zip
+          unzip TestDataClient.zip -d TestDataClientDir
+
+          # Make the executable inside the zip executable (assuming it's in the root)
+          chmod +x TestDataClientDir/TestDataClient
+
+          # Run the TestDataClient to load data
+          ./TestDataClientDir/TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/
 
       - name: Verify Test Data Loaded (Example, adjust as needed)
         run: |
