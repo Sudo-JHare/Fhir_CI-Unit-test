@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload IG using UploadFIG
         run: |
-          UploadFIG -pid ${{env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{env.TERM_SERVER }}
+          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERM_SERVER }}
 
       - name: Clone Test Data
         run: |
