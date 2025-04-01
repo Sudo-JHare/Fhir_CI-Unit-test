@@ -77,10 +77,6 @@ jobs:
         run: |
           dotnet tool install --global UploadFIG
 
-      - name: Clone IG Repository
-        run: |
-          git clone https://github.com/${{ env.IG_REPO }}.git ig_repo
-
       - name: Upload IG using UploadFIG
         run: |
           uploadfig -c ${{ env.UPLOADFIG_CONFIG }}
