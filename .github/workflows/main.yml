@@ -28,12 +28,18 @@ jobs:
       - name: Load Configuration
         id: load-config
         run: |
-          # Read the config.properties file
+          # Read the config.properties file and create an environment file
+          echo "Loading configuration from config.properties"
           while IFS='=' read -r key value; do
-            echo "::set-env name=$key::$value"
+            echo "$key=$value" >> $GITHUB_ENV
           done < config.properties
 
-          echo "Configuration loaded"
+      - name: Debug Environment Variables
+        run: |
+          echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
+          echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
+          echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
+          echo "TERM_SERVER: ${{ env.TERM_SERVER }}"
 
       - name: Start HAPI FHIR Server
         run: |
@@ -57,13 +63,6 @@ jobs:
       - name: Install UploadFIG
         run: |
           dotnet tool install --global UploadFIG
-
-      - name: Debug Environment Variables
-        run: |
-          echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
-          echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
-          echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
-          echo "TERM_SERVER: ${{ env.TERM_SERVER }}"
 
       - name: Upload IG using UploadFIG
         run: |
