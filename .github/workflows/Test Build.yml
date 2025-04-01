@@ -106,10 +106,13 @@ jobs:
           # Install GitHub CLI and unzip
           sudo apt-get update
           sudo apt-get install -y gh unzip jq  # Added jq installation
-      
+          
+          env:
+          GH_TOKEN: ${{ github.token }}
+          
           # Get the latest release from au-fhir-test-data-utils
           LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
-      
+        
           # Debug: Print all assets
           echo "Latest Release: $LATEST_RELEASE"
           gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq '.assets'
