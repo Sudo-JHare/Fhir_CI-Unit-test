@@ -135,8 +135,8 @@ jobs:
           # Make the executable inside the zip executable (assuming it's in the root)
           chmod +x TestDataClientDir/Sparked.TestDataClient  # Adjust if needed
 
-    # Run the TestDataClient to load data
-    ./TestDataClientDir/Sparked.TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/  # Adjust if needed
+          # Run the TestDataClient to load data
+          ./TestDataClientDir/Sparked.TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/  # Adjust if needed
 
       - name: Verify Test Data Loaded (Example, adjust as needed)
         run: |
