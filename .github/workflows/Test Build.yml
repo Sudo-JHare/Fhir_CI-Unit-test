@@ -46,13 +46,12 @@ jobs:
         java: [ '17' ]
     env:
       HAPI_VERSION: 6.5.1
-      IG_REPO: ${{ github.event.inputs.ig_repo }}
-      TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo }}
-      #UPLOADFIG_CONFIG: ${{ github.event.inputs.uploadfig_config }}
-      IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id }}
-      IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version }}
-      HAPI_SERVER: ${{ github.event.inputs.hapi_server }} # Corrected case
-      TERM_SERVER: ${{ github.event.inputs.terminology_server }} # Corrected case
+      IG_REPO: ${{ github.event.inputs.ig_repo || 'hl7au/au-fhir-ig' }}
+      TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo || 'hl7au/au-fhir-test-data' }}
+      IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id || 'hl7.fhir.au.core' }}
+      IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version || '1.1.0-preview' }}
+      HAPI_SERVER: ${{ github.event.inputs.hapi_server || 'http://localhost:8080/fhir' }}
+      TERM_SERVER: ${{ github.event.inputs.terminology_server || 'https://api.healthterminologies.gov.au/integration/R4/fhir' }}
 
     steps:
       - name: Checkout code
