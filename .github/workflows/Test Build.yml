@@ -56,13 +56,23 @@ jobs:
 
       - name: Start HAPI FHIR Server
         run: |
-          docker run -d -p 8080:8080 -e HAPI_FHIR_VERSION=${HAPI_VERSION} hapiproject/hapi-fhir-jpaserver:r4
+          docker pull hapiproject/hapi:latest
+          docker run -d -p 8080:8080 hapiproject/hapi:latest
+          echo "Waiting for HAPI FHIR server to be ready..."
 
       - name: Wait for HAPI FHIR Server to start
         run: |
-          sleep 10
-          curl --fail http://localhost:8080/fhir/metadata
+          until curl --silent --fail http://localhost:8080/fhir/metadata; do
+            echo "Waiting..."
+            sleep 10
+          done
+          echo "HAPI FHIR Server is running."
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x' # Specify the .NET version you need
+      
       - name: Install UploadFIG
         run: |
           dotnet tool install --global UploadFIG
