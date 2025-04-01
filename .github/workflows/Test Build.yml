@@ -123,13 +123,13 @@ jobs:
           fi
 
           # Download the zip
-          wget $ASSET_URL -O TestDataClient.zip
+          wget $ASSET_URL -O TestDataClient-linux-x64.zip
 
           # Create a directory for extraction
           mkdir TestDataClientDir
 
           # Extract the zip
-          unzip TestDataClient.zip -d TestDataClientDir
+          unzip TestDataClient-linux-x64.zip -d TestDataClientDir
 
           # Make the executable inside the zip executable (assuming it's in the root)
           chmod +x TestDataClientDir/TestDataClient
