@@ -87,6 +87,13 @@ jobs:
         run: |
           dotnet tool install --global UploadFIG
 
+      - name: Debug Environment Variables
+        run: |
+          echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
+          echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
+          echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
+          echo "TERM_SERVER: ${{ env.TERM_SERVER }}"
+
       - name: Upload IG using UploadFIG
         run: |
           UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERM_SERVER }}
