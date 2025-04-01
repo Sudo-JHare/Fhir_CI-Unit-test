@@ -103,43 +103,57 @@ jobs:
 
       - name: Load Test Data
         run: |
-          # Install GitHub CLI and unzip
+          set -x  # Enable shell debugging
+
+          # Install GitHub CLI, unzip, and jq
           sudo apt-get update
-          sudo apt-get install -y gh unzip jq  # Added jq installation
-          
-          env:
-          GH_TOKEN: ${{ github.token }}
-          
+          sudo apt-get install -y gh unzip jq
+
+          # Clone the test data repository
+          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
+
           # Get the latest release from au-fhir-test-data-utils
           LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
-        
-          # Debug: Print all assets
-          echo "Latest Release: $LATEST_RELEASE"
+
+          # Debug: Print the release tag
+          echo "Latest Release Tag: $LATEST_RELEASE"
+
+          # Debug: Print the entire release JSON
+          echo "Full Release JSON:"
+          gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE
+
+          # Debug: Print the assets array JSON
+          echo "Assets Array JSON:"
           gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq '.assets'
-      
-          # Find the Linux zip asset URL (CORRECTED filter)
+
+          # Find the Linux zip asset URL (CORRECTED filter - ADJUST THIS!)
           ASSET_URL=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq -r '.assets[] | select(.name == "TestDataClient-linux-x64.zip") | .browser_download_url')
-      
+
+          # Debug: Print the Asset URL
+          echo "Asset URL: $ASSET_URL"
+
           # Check if an asset URL was found
           if [ -z "$ASSET_URL" ]; then
             echo "Error: No Linux zip found in the latest release ($LATEST_RELEASE)"
             exit 1
           fi
-      
+
           # Download the zip
-          wget $ASSET_URL -O TestDataClient.zip
-      
+          wget "$ASSET_URL" -O TestDataClient.zip  # Quoted
+
           # Create a directory for extraction
           mkdir TestDataClientDir
-      
+
           # Extract the zip
           unzip TestDataClient.zip -d TestDataClientDir
-      
+
           # Make the executable inside the zip executable (assuming it's in the root)
-          chmod +x TestDataClientDir/Sparked.TestDataClient  # Adjust if needed
+          chmod +x "TestDataClientDir/TestDataClient"   # Quoted
 
           # Run the TestDataClient to load data
-          ./TestDataClientDir/Sparked.TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/  # Adjust if needed
+          "./TestDataClientDir/TestDataClient" --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/  # Quoted
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Verify Test Data Loaded (Example, adjust as needed)
         run: |
