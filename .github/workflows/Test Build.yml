@@ -29,6 +29,14 @@ on:
         description: 'IG Package Version (e.g., 1.1.0-preview)'
         required: false
         default: '1.1.0-preview'
+      hapi_server:
+        description: 'path to local hapi server'
+        required: false
+        default: 'http://localhost:8080/fhir'
+      terminology_server:
+        description: 'the termininology server to hit to resolve ig references used by uploadfig'
+        required: false
+        default: 'https://api.healthterminologies.gov.au/integration/R4/fhir'
 
 jobs:
   deploy_and_load:
@@ -43,6 +51,8 @@ jobs:
       UPLOADFIG_CONFIG: ${{ github.event.inputs.uploadfig_config }}
       IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id }}
       IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version }}
+      HAPI_SERVER: ${{ github.event.inputs.hapi_server }}
+      TERM_SERVER: ${{ github.event.inputs.terminology_server }}
 
     steps:
       - name: Checkout code
@@ -79,7 +89,7 @@ jobs:
 
       - name: Upload IG using UploadFIG
         run: |
-          UploadFIG -c ${{ env.UPLOADFIG_CONFIG }}
+          UploadFIG -pid ${{env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{env.TERM_SERVER }}
 
       - name: Clone Test Data
         run: |
