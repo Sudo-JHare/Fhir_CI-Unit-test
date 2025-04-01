@@ -144,11 +144,11 @@ jobs:
           # Extract the zip
           unzip TestDataClient.zip -d TestDataClientDir
 
-          # Make the executable inside the zip executable (assuming it's in the root)
-          chmod +x "TestDataClientDir/TestDataClient"   # Quoted
+          # Make the executable inside the zip executable (assuming it's in the 'TestDataClient-linux-x64-binaries' subdirectory)
+          chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
 
           # Run the TestDataClient to load data
-          "./TestDataClientDir/TestDataClient" --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/  # Quoted
+          ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/
         env:
           GH_TOKEN: ${{ github.token }}
 
