@@ -107,9 +107,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gh unzip
 
-          # Clone the test data repository
-          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
-
           # Get the latest release from au-fhir-test-data-utils
           LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
 
