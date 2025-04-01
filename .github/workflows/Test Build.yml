@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload IG using UploadFIG
         run: |
-          uploadfig -c ${{ env.UPLOADFIG_CONFIG }}
+          UploadFIG -c ${{ env.UPLOADFIG_CONFIG }}
 
       - name: Clone Test Data
         run: |
