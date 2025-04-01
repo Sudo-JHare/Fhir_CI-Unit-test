@@ -39,7 +39,7 @@ jobs:
           echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
           echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
           echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
-          echo "TERM_SERVER: ${{ env.TERM_SERVER }}"
+          echo "TERMINOLOGY_SERVER: ${{ env.TERMINOLOGY_SERVER }}"
 
       - name: Start HAPI FHIR Server
         run: |
@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload IG using UploadFIG
         run: |
-          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERM_SERVER }}
+          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERMINOLOGY_SERVER }}
 
       - name: Clone Test Data
         run: |
