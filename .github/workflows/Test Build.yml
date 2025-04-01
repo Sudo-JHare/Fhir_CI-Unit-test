@@ -101,7 +101,7 @@ jobs:
         run: |
           git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
 
-      name: Load Test Data
+      - name: Load Test Data
         run: |
           # Clone the test data utils repository
           git clone https://github.com/hl7au/au-fhir-test-data-utils.git test_data_utils
