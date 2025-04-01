@@ -17,6 +17,18 @@ on:
         description: 'Test Data Repository (e.g., hl7au/au-fhir-test-data)'
         required: false
         default: 'hl7au/au-fhir-test-data'
+      uploadfig_config:
+        description: 'Path to UploadFIG config file (relative to repo root)'
+        required: false
+        default: 'uploadfig.json'
+      ig_package_id:
+        description: 'IG Package ID (e.g., hl7.fhir.au.core)'
+        required: false
+        default: 'hl7.fhir.au.core'
+      ig_package_version:
+        description: 'IG Package Version (e.g., 1.1.0-preview)'
+        required: false
+        default: '1.1.0-preview'
 
 jobs:
   deploy_and_load:
@@ -28,6 +40,9 @@ jobs:
       HAPI_VERSION: 6.5.1
       IG_REPO: ${{ github.event.inputs.ig_repo }}
       TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo }}
+      UPLOADFIG_CONFIG: ${{ github.event.inputs.uploadfig_config }}
+      IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id }}
+      IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version }}
 
     steps:
       - name: Checkout code
@@ -48,11 +63,6 @@ jobs:
           sleep 10
           curl --fail http://localhost:8080/fhir/metadata
 
-      - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '9.0.x' # Specify the .NET version you need
-
       - name: Install UploadFIG
         run: |
           dotnet tool install --global UploadFIG
@@ -63,7 +73,7 @@ jobs:
 
       - name: Upload IG using UploadFIG
         run: |
-          uploadfig -p ig_repo/package -s http://localhost:8080/fhir
+          uploadfig -c ${{ env.UPLOADFIG_CONFIG }}
 
       - name: Clone Test Data
         run: |
