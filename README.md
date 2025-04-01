@@ -18,8 +18,8 @@ The workflow now reads configuration values from a `config.properties` file loca
 
 The workflow consists of the following key steps:
 
-1.  **Checkout code:** Checks out the repository code. [cite: 10, 11, 35, 36]
-2.  **Set up JDK:** Sets up the specified Java Development Kit (JDK) version. [cite: 10, 11, 35, 36]
+1.  **Checkout code:** Checks out the repository code.
+2.  **Set up JDK:** Sets up the specified Java Development Kit (JDK) version. 
 3.  **Load Configuration:** Reads the `config.properties` file and sets environment variables.
 4.  **Build and Push Docker Image:**
     * This step is executed only on `push` events to the `main` branch.
@@ -27,31 +27,31 @@ The workflow consists of the following key steps:
     * The image is tagged with the Git SHA and pushed to Docker Hub.
     * Optionally, it also tags and pushes the image with the `latest` tag.
 5.  **Start HAPI FHIR Server:**
-    * Pulls the latest HAPI FHIR Docker image. [cite: 11, 36]
-    * Runs the HAPI FHIR server in a Docker container. [cite: 11, 36]
-6.  **Wait for HAPI FHIR Server to start:** Waits until the HAPI FHIR server is ready to accept connections. [cite: 11, 12, 36, 37]
-7.  **Setup .NET SDK:** Sets up the .NET SDK. [cite: 13, 38, 39, 40, 41]
-8.  **Install UploadFIG:** Installs the `UploadFIG` tool globally. [cite: 13, 14, 38, 39, 40, 41]
-9.  **Debug Environment Variables:** Prints the values of key environment variables for debugging. [cite: 14, 15, 39, 40]
-10. **Upload IG using UploadFIG:** Uploads the Implementation Guide to the HAPI FHIR server using the `UploadFIG` tool. [cite: 15, 16, 40, 41]
-11. **Clone Test Data:** Clones the repository containing the test data. [cite: 16, 17, 41, 42]
+    * Pulls the latest HAPI FHIR Docker image. 
+    * Runs the HAPI FHIR server in a Docker container. 
+6.  **Wait for HAPI FHIR Server to start:** Waits until the HAPI FHIR server is ready to accept connections. 
+7.  **Setup .NET SDK:** Sets up the .NET SDK. 
+8.  **Install UploadFIG:** Installs the `UploadFIG` tool globally. 
+9.  **Debug Environment Variables:** Prints the values of key environment variables for debugging. 
+10. **Upload IG using UploadFIG:** Uploads the Implementation Guide to the HAPI FHIR server using the `UploadFIG` tool. 
+11. **Clone Test Data:** Clones the repository containing the test data. 
 12. **Load Test Data:**
-    * Downloads the latest Linux executable of the TestDataClient from the releases in the `au-fhir-test-data-utils` repository. [cite: 17, 18, 19, 20, 21, 22, 23, 24, 42, 43]
-    * Loads the test data into the HAPI FHIR server using the `TestDataClient` tool. [cite: 17, 18, 19, 20, 21, 22, 23, 24, 42, 43]
-13. **Verify Test Data Loaded:** Verifies that the test data was loaded successfully (e.g., by querying the server for a specific resource type). [cite: 24, 25, 43, 44]
+    * Downloads the latest Linux executable of the TestDataClient from the releases in the `au-fhir-test-data-utils` repository. 
+    * Loads the test data into the HAPI FHIR server using the `TestDataClient` tool. 
+13. **Verify Test Data Loaded:** Verifies that the test data was loaded successfully (e.g., by querying the server for a specific resource type). 
 
 ##   Environment Variables
 
 The workflow uses the following environment variables, which are now loaded from the `config.properties` file:
 
-* `HAPI_VERSION`: The version of the HAPI FHIR server. [cite: 4, 5, 29, 30]
-* `IG_REPO`: The GitHub repository containing the Implementation Guide. [cite: 4, 5, 29, 30]
-* `TEST_DATA_REPO`: The GitHub repository containing the test data. [cite: 4, 5, 29, 30, 31]
-* `UPLOADFIG_CONFIG`: Path to the UploadFIG configuration file. [cite: 4, 5, 29, 30, 31, 32]
-* `IG_PACKAGE_ID`: The IG Package ID. [cite: 4, 5, 29, 30, 31, 32]
-* `IG_PACKAGE_VERSION`: The IG Package Version. [cite: 6, 7, 31, 32, 33, 34]
-* `HAPI_SERVER`: The URL of the HAPI FHIR server. [cite: 8, 9, 33, 34]
-* `TERM_SERVER`: The URL of the terminology server. [cite: 9, 10, 34, 35]
+* `HAPI_VERSION`: The version of the HAPI FHIR server. 
+* `IG_REPO`: The GitHub repository containing the Implementation Guide. 
+* `TEST_DATA_REPO`: The GitHub repository containing the test data. 
+* `UPLOADFIG_CONFIG`: Path to the UploadFIG configuration file. 
+* `IG_PACKAGE_ID`: The IG Package ID. 
+* `IG_PACKAGE_VERSION`: The IG Package Version. 
+* `HAPI_SERVER`: The URL of the HAPI FHIR server. 
+* `TERM_SERVER`: The URL of the terminology server. 
 
 ##   Docker Image
 
