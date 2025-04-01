@@ -101,9 +101,25 @@ jobs:
         run: |
           git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
 
-      - name: Load Test Data
+      name: Load Test Data
         run: |
-          java -jar hapi-fhir-cli.jar upload-files -d test_data/au-fhir-test-data-set/ -s http://localhost:8080/fhir
+          # Clone the test data utils repository
+          git clone https://github.com/hl7au/au-fhir-test-data-utils.git test_data_utils
+
+          # Navigate to the Sparked.TestDataClient directory
+          cd test_data_utils/Sparked.TestDataClient
+
+          # Restore dependencies
+          dotnet restore
+
+          # Build for Linux
+          dotnet publish -c Release -r linux-x64 --self-contained false -o out
+
+          # Navigate back to the main directory
+          cd ../../
+
+          # Use the compiled TestDataClient to load data
+          test_data_utils/Sparked.TestDataClient/out/Sparked.TestDataClient --server http://localhost:8080/fhir --directory test_data/au-fhir-test-data-set/
 
       - name: Verify Test Data Loaded (Example, adjust as needed)
         run: |
