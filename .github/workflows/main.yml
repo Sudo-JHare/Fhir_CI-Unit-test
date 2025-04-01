@@ -8,35 +8,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      ig_repo:
-        description: 'IG Repository (e.g., hl7au/au-fhir-ig)'
-        required: false
-        default: 'hl7au/au-fhir-ig'
-      test_data_repo:
-        description: 'Test Data Repository (e.g., hl7au/au-fhir-test-data)'
-        required: false
-        default: 'hl7au/au-fhir-test-data'
-      uploadfig_config:
-        description: 'Path to UploadFIG config file (relative to repo root)'
-        required: false
-        default: 'uploadfig.json'
-      ig_package_id:
-        description: 'IG Package ID (e.g., hl7.fhir.au.core)'
-        required: false
-        default: 'hl7.fhir.au.core'
-      ig_package_version:
-        description: 'IG Package Version (e.g., 1.1.0-preview)'
-        required: false
-        default: '1.1.0-preview'
-      hapi_server: # Corrected case
-        description: 'path to local hapi server'
-        required: false
-        default: 'http://localhost:8080/fhir'
-      terminology_server: # Corrected case
-        description: 'the terminology server to hit to resolve ig references used by uploadfig'
-        required: false
-        default: 'https://api.healthterminologies.gov.au/integration/R4/fhir'
 
 jobs:
   deploy_and_load:
@@ -44,15 +15,6 @@ jobs:
     strategy:
       matrix:
         java: [ '17' ]
-    env:
-      HAPI_VERSION: 6.5.1
-      IG_REPO: ${{ github.event.inputs.ig_repo || 'hl7au/au-fhir-ig' }}
-      TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo || 'hl7au/au-fhir-test-data' }}
-      IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id || 'hl7.fhir.au.core' }}
-      IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version || '1.1.0-preview' }}
-      HAPI_SERVER: ${{ github.event.inputs.hapi_server || 'http://localhost:8080/fhir' }}
-      TERM_SERVER: ${{ github.event.inputs.terminology_server || 'https://api.healthterminologies.gov.au/integration/R4/fhir' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -62,6 +24,16 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
+
+      - name: Load Configuration
+        id: load-config
+        run: |
+          # Read the config.properties file
+          while IFS='=' read -r key value; do
+            echo "::set-env name=$key::$value"
+          done < config.properties
+
+          echo "Configuration loaded"
 
       - name: Start HAPI FHIR Server
         run: |
@@ -81,7 +53,7 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x' # Specify the .NET version you need
-      
+
       - name: Install UploadFIG
         run: |
           dotnet tool install --global UploadFIG
