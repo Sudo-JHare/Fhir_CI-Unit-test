@@ -1,0 +1,6 @@
+{
+  "Package": "ig_repo/package",
+  "Server": "http://localhost:8080/fhir",
+  "PackageId": "${{ env.IG_PACKAGE_ID }}",
+  "PackageVersion": "${{ env.IG_PACKAGE_VERSION }}"
+}
