@@ -52,7 +52,7 @@ RUN rbenv rehash
 RUN apt-get update && apt-get install -y --no-install-recommends tomcat9 && rm -rf /var/lib/apt/lists/*
 # Download or copy the HAPI FHIR server WAR file
 # Option 1: Download (Replace URL with the correct one for your desired HAPI version)
-RUN wget https://github.com/hapifhir/hapi-fhir/releases/download/v6.10.1/hapi-fhir-6.10.1-server.war -O /var/lib/tomcat9/webapps/fhir.war # <-- Uncommented and URL updated
+RUN wget https://github.com/hapifhir/hapi-fhir/releases/download/v6.10.1/hapi-fhir-6.10.1-plain.war -O /var/lib/tomcat9/webapps/fhir.war # <-- Corrected URL with -plain
 # Option 2: Copy from your repository if you include the WAR file
 # COPY path/to/your/hapi-fhir-X.Y.Z-server.war /var/lib/tomcat9/webapps/fhir.war
 
