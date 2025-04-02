@@ -45,8 +45,7 @@ jobs:
       - name: Start HAPI FHIR Server
         run: |
           docker pull hapiproject/hapi:latest
-          docker run -d --name HAPI_SERV -p 8080:8080 hapiproject/hapi:latest
-          ports: 8080:8080  # Maps container port 80 to host port 8080
+          docker run -d --name HAPI_SERV -p 0.0.0.0:8080:8080 hapiproject/hapi:latest
           echo "Waiting for HAPI FHIR server to be ready..."
           docker ps
 
@@ -54,6 +53,8 @@ jobs:
         run: |
           sudo echo "127.0.0.1 HAPI_SERV" | sudo tee -a /etc/hosts
           sudo echo "localhost HAPI_SERV" | sudo tee -a /etc/hosts
+          sudo echo "0.0.0.0 HAPI_SERV" | sudo tee -a /etc/hosts
+          
 
       - name: Wait for HAPI FHIR Server to start
         run: |
