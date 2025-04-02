@@ -46,6 +46,7 @@ jobs:
         run: |
           docker pull hapiproject/hapi:latest
           docker run -d --name HAPI_SERV -p 8080:8080 hapiproject/hapi:latest
+          ports: 8080:8080  # Maps container port 80 to host port 8080
           echo "Waiting for HAPI FHIR server to be ready..."
           docker ps
 
