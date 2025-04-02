@@ -49,9 +49,14 @@ jobs:
           echo "Waiting for HAPI FHIR server to be ready..."
           docker ps
 
+      - name: Add hosts to /etc/hosts
+        run: |
+          sudo echo "127.0.0.1 HAPI_SERV" | sudo tee -a /etc/hosts
+          sudo echo "localhost HAPI_SERV" | sudo tee -a /etc/hosts
+
       - name: Wait for HAPI FHIR Server to start
         run: |
-          until curl --silent --fail HAPI_SERV:8080/fhir/metadata; do
+          until curl --silent --fail http://HAPI_SERV:8080/fhir/metadata; do
             echo "Waiting..."
             sleep 10
           done
