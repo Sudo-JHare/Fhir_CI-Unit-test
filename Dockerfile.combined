@@ -9,14 +9,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Install Ruby (Example using rbenv/ruby-build) ---
-RUN git clone https://github.com/rbenv/rbenv.git ~/.rbenv
-RUN echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
-RUN echo 'eval "$(rbenv init -)"' >> ~/.bashrc
-RUN git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
-# Specify the Ruby version required by your Inferno version
+# Clone rbenv and ruby-build for the root user (or adjust user if needed)
+RUN git clone https://github.com/rbenv/rbenv.git /root/.rbenv
+RUN git clone https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build
+
+# Add rbenv's bin and shims directories to the PATH Environment Variable
+# This makes 'rbenv' command available for subsequent RUN steps and in the final container
+ENV PATH="/root/.rbenv/bin:/root/.rbenv/shims:${PATH}"
+
+# Specify the Ruby version required by your Inferno version & install
+# Now 'rbenv' command should be found because it's in the PATH
 RUN rbenv install 3.1.2
 RUN rbenv global 3.1.2
+
+# Verify installation (optional but recommended)
+RUN ruby -v
+RUN which ruby
+
+# Install bundler using the installed Ruby's gem
 RUN gem install bundler
+# Update rbenv shims after installing gems with executables
+RUN rbenv rehash
 
 # --- Setup HAPI FHIR (Example: Using pre-built WAR with Tomcat) ---
 # Install Tomcat (adjust version as needed)
