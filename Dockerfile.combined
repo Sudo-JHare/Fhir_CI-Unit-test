@@ -5,8 +5,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # --- Install Common Dependencies ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl wget git build-essential libpq-dev libsqlite3-dev nodejs npm yarn openjdk-17-jdk maven \
+    curl wget git build-essential libpq-dev libsqlite3-dev nodejs npm openjdk-17-jdk maven \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Yarn using npm to get a more recent version
+RUN npm install -g yarn # <-- Add this line
 
 # --- Install Ruby (Example using rbenv/ruby-build) ---
 
