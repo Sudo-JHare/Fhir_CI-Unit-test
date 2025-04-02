@@ -1,0 +1,54 @@
+# Choose a suitable base image (e.g., Ubuntu)
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# --- Install Common Dependencies ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl wget git build-essential libpq-dev libsqlite3-dev nodejs npm yarn openjdk-17-jdk maven \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Install Ruby (Example using rbenv/ruby-build) ---
+RUN git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+RUN echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
+RUN echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+RUN git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+# Specify the Ruby version required by your Inferno version
+RUN rbenv install 3.1.2
+RUN rbenv global 3.1.2
+RUN gem install bundler
+
+# --- Setup HAPI FHIR (Example: Using pre-built WAR with Tomcat) ---
+# Install Tomcat (adjust version as needed)
+RUN apt-get update && apt-get install -y --no-install-recommends tomcat9 && rm -rf /var/lib/apt/lists/*
+# Download or copy the HAPI FHIR server WAR file
+# Option 1: Download (Replace URL with the correct one for your desired HAPI version)
+# RUN wget https://github.com/hapifhir/hapi-fhir/releases/download/vX.Y.Z/hapi-fhir-X.Y.Z-server.war -O /var/lib/tomcat9/webapps/fhir.war
+# Option 2: Copy from your repository if you include the WAR file
+# COPY path/to/your/hapi-fhir-X.Y.Z-server.war /var/lib/tomcat9/webapps/fhir.war
+
+# Configure Tomcat (memory, ports, etc.) - Placeholder
+# RUN echo "CATALINA_OPTS=\"-Xmx2g -Xms1g\"" > /usr/share/tomcat9/bin/setenv.sh
+
+# --- Setup Inferno ---
+WORKDIR /app
+# Clone Inferno (or COPY if preferred) - Use the specific repo URL from your env vars
+ARG TESTKIT_REPO_URL
+RUN git clone ${TESTKIT_REPO_URL} .
+# Install Inferno Ruby dependencies
+RUN bundle config set --local without 'development test'
+RUN bundle install --jobs 4 --retry 3
+# Install Inferno JavaScript dependencies
+RUN yarn install --frozen-lockfile
+
+# --- Setup Process Manager (Example: supervisord) ---
+RUN apt-get update && apt-get install -y --no-install-recommends supervisor && rm -rf /var/lib/apt/lists/*
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports (HAPI's default, Inferno's default - adjust if needed)
+EXPOSE 8080
+EXPOSE 4567
+
+# --- Entrypoint/CMD ---
+# Use supervisord to manage both Tomcat (for HAPI) and Inferno processes
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
