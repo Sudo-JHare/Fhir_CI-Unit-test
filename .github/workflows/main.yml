@@ -47,6 +47,7 @@ jobs:
           docker pull hapiproject/hapi:latest
           docker run -d --name HAPI_SERV -p 8080:8080 hapiproject/hapi:latest
           echo "Waiting for HAPI FHIR server to be ready..."
+          docker ps
 
       - name: Wait for HAPI FHIR Server to start
         run: |
