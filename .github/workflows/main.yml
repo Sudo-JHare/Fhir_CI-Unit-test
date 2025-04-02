@@ -144,6 +144,14 @@ jobs:
           cd inferno;
           pwd
 
+      # NEW: Set up Inferno Database
+      - name: Set up Inferno Database
+        run: |
+          cd inferno
+          docker-compose run inferno bundle exec rake db:create db:migrate
+          echo "Placeholder: Database setup command"
+          ls -la
+
       #- name: Verify Test Data Loaded (Example, adjust as needed)
       #  run: |
       #    curl http://localhost:8080/fhir/Patient
