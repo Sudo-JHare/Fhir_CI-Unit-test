@@ -27,8 +27,8 @@ ENV PATH="/root/.rbenv/bin:/root/.rbenv/shims:${PATH}"
 
 # Specify the Ruby version required by your Inferno version & install
 # Now zlib1g-dev is present, so the zlib extension should build correctly.
-RUN rbenv install 3.1.2
-RUN rbenv global 3.1.2
+RUN rbenv install 3.3.6
+RUN rbenv global 3.3.6
 
 # Verify installation (optional but recommended)
 RUN ruby -v
