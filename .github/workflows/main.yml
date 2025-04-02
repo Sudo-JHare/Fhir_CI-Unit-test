@@ -1,183 +1,149 @@
 name: Deploy HAPI FHIR Server, Load IG and Test Data
- ​
- on:
+
+on:
   push:
-     branches:
-       - main
+    branches:
+      - main
   pull_request:
-     branches:
-       - main
+    branches:
+      - main
   workflow_dispatch:
-     inputs:
-       ig_repo:
-         description: 'IG Repository (e.g., hl7au/au-fhir-ig)'
-         required: false
-         default: 'hl7au/au-fhir-ig'
-       test_data_repo:
-         description: 'Test Data Repository (e.g., hl7au/au-fhir-test-data)'
-         required: false
-         default: 'hl7au/au-fhir-test-data'
-       uploadfig_config:
-         description: 'Path to UploadFIG config file (relative to repo root)'
-         required: false
-         default: 'uploadfig.json'
-       ig_package_id:
-         description: 'IG Package ID (e.g., hl7.fhir.au.core)'
-         required: false
-         default: 'hl7.fhir.au.core'
-       ig_package_version:
-         description: 'IG Package Version (e.g., 1.1.0-preview)'
-         required: false
-         default: '1.1.0-preview'
-       hapi_server: # Corrected case
-         description: 'path to local hapi server'
-         required: false
-         default: 'http://localhost:8080/fhir'
-       terminology_server: # Corrected case
-         description: 'the terminology server to hit to resolve ig references used by uploadfig'
-         required: false
-         default: 'https://api.healthterminologies.gov.au/integration/R4/fhir'
-       testkit_repo: # NEW INPUT VARIABLE
-         description: 'Inferno TestKit Repository URL (e.g., https://github.com/hl7au/au-fhir-core-inferno)'
-         required: false
-         default: 'https://github.com/inferno-framework/inferno-template.git' # Default to the original repo
- ​
- jobs:
-    deploy_and_load:
-       runs-on: ubuntu-latest
-       strategy:
-         matrix:
-           java: [ '17' ]
-       env:
-         HAPI_VERSION: 6.5.1
-         IG_REPO: ${{ github.event.inputs.ig_repo || 'hl7au/au-fhir-ig' }}
-         TEST_DATA_REPO: ${{ github.event.inputs.test_data_repo || 'hl7au/au-fhir-test-data' }}
-         IG_PACKAGE_ID: ${{ github.event.inputs.ig_package_id || 'hl7.fhir.au.core' }}
-         IG_PACKAGE_VERSION: ${{ github.event.inputs.ig_package_version || '1.1.0-preview' }}
-         HAPI_SERVER: ${{ github.event.inputs.hapi_server || 'http://localhost:8080/fhir' }}
-         TERM_SERVER: ${{ github.event.inputs.terminology_server || 'https://api.healthterminologies.gov.au/integration/R4/fhir' }}
-         TESTKIT_REPO: ${{ github.event.inputs.testkit_repo || 'https://github.com/inferno-framework/inferno-template.git' }} # NEW ENV VARIABLE
- ​
-       steps:
-         - name: Checkout code
-           uses: actions/checkout@v3
- ​
-         - name: Set up JDK ${{ matrix.java }}
-           uses: actions/setup-java@v3
-           with:
-             java-version: ${{ matrix.java }}
-             distribution: 'temurin'
- ​
-         - name: Start HAPI FHIR Server
-           run: |
-             docker pull hapiproject/hapi:latest
-             docker run -d -p 8080:8080 hapiproject/hapi:latest
-             echo "Waiting for HAPI FHIR server to be ready..."
- ​
-         - name: Wait for HAPI FHIR Server to start
-           run: |
-             until curl --silent --fail http://localhost:8080/fhir/metadata; do
-               echo "Waiting..."
-               sleep 10
-             done
-             echo "HAPI FHIR Server is running."
- ​
-         - name: Setup .NET SDK
-           uses: actions/setup-dotnet@v3
-           with:
-             dotnet-version: '9.0.x' # Specify the .NET version you need
-       
-         - name: Install UploadFIG
-           run: |
-             dotnet tool install --global UploadFIG
- ​
-         - name: Debug Environment Variables
-           run: |
-             echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
-             echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
-             echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
-             echo "TERM_SERVER: ${{ env.TERM_SERVER }}"
-             echo "TESTKIT_REPO: ${{ env.TESTKIT_REPO }}" # NEW DEBUG
- ​
-         - name: Upload IG using UploadFIG
-           run: |
-             UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERM_SERVER }}
- ​
-         - name: Clone Test Data
-           run: |
-             git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
- ​
-         # NEW: Clone Inferno TestKit
-         - name: Clone Inferno TestKit
-           run: |
-             git clone ${{ env.TESTKIT_REPO }} inferno
-             cd inferno
-             pwd
- ​
-         - name: Load Test Data
-           run: |
-             set -x  # Enable shell debugging
- ​
-             # Install GitHub CLI, unzip, and jq
-             sudo apt-get update
-             sudo apt-get install -y gh unzip jq
- ​
-             # Get the latest release from au-fhir-test-data-utils
-             LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
- ​
-             # Debug: Print the release tag
-             echo "Latest Release Tag: $LATEST_RELEASE"
- ​
-             # Debug: Print the entire release JSON
-             echo "Full Release JSON:"
-             gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE
- ​
-             # Debug: Print the assets array JSON
-             echo "Assets Array JSON:"
-             gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq '.assets'
- ​
-             # Find the Linux zip asset URL (CORRECTED filter - ADJUST THIS!)
-             ASSET_URL=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq -r '.assets[] | select(.name == "TestDataClient-linux-x64.zip") | .browser_download_url')
- ​
-             # Debug: Print the Asset URL
-             echo "Asset URL: $ASSET_URL"
- ​
-             # Check if an asset URL was found
-             if [ -z "$ASSET_URL" ]; then
-               echo "Error: No Linux zip found in the latest release ($LATEST_RELEASE)"
-               exit 1
-             fi
- ​
-             # Download the zip
-             wget "$ASSET_URL" -O TestDataClient.zip  # Quoted
- ​
-             # Create a directory for extraction
-             mkdir TestDataClientDir
- ​
-             # Extract the zip
-             unzip TestDataClient.zip -d TestDataClientDir
- ​
-             # Make the executable inside the zip executable (assuming it's in the 'TestDataClient-linux-x64-binaries' subdirectory)
-             chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
- ​
-             # Construct absolute directory path
-             #DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
- ​
-             # Debug: Print the command
-             echo "Executing: ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory $DATA_DIR"
- ​
-             # Define the resource types
-             items=("Patient" "HealthcareService" "Organization" "Location" "Practitioner" "PractitionerRole" "RelatedPerson" "Encounter" "AllergyIntolerance" "Condition" "Immunization" "Procedure" "Observation" "Medication" "MedicationRequest" "MedicationStatement" "Coverage" "Specimen" "CommunicationRequest" "Consent" "ServiceRequest" "Task")
- ​
-             # Loop through each resource type and call TestDataClient
-             for item in "${items[@]}"; do
-               echo "Loading data for: $item"
-               "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "$item" "$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/" "http://localhost:8080/fhir" "basic" "default"
-             done
- ​
-           env:
-             GH_TOKEN: ${{ github.token }}
- ​
-         - name: Verify Test Data Loaded (Example, adjust as needed)
-           run: |
-             curl http://localhost:8080/fhir/Patient
+
+jobs:
+  deploy_and_load:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '17' ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+
+      - name: Load Configuration
+        id: load-config
+        run: |
+          # Read the config.properties file and create an environment file
+          echo "Loading configuration from config.properties"
+          while IFS='=' read -r key value; do
+            echo "$key=$value" >> $GITHUB_ENV
+          done < config.properties
+
+      - name: Debug Environment Variables
+        run: |
+          echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
+          echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
+          echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
+          echo "TERMINOLOGY_SERVER: ${{ env.TERMINOLOGY_SERVER }}"
+          echo "TESTKIT_REPO: ${{ env.TESTKIT_REP }}"
+
+      - name: Start HAPI FHIR Server
+        run: |
+          docker pull hapiproject/hapi:latest
+          docker run -d -p 8080:8080 hapiproject/hapi:latest
+          echo "Waiting for HAPI FHIR server to be ready..."
+
+      - name: Wait for HAPI FHIR Server to start
+        run: |
+          until curl --silent --fail http://localhost:8080/fhir/metadata; do
+            echo "Waiting..."
+            sleep 10
+          done
+          echo "HAPI FHIR Server is running."
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x' # Specify the .NET version you need
+
+      - name: Install UploadFIG
+        run: |
+          dotnet tool install --global UploadFIG
+
+      - name: Upload IG using UploadFIG
+        run: |
+          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERMINOLOGY_SERVER }}
+
+      - name: Clone Test Data
+        run: |
+          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
+
+      - name: Load Test Data
+        run: |
+          set -x  # Enable shell debugging
+
+          # Install GitHub CLI, unzip, and jq
+          sudo apt-get update
+          sudo apt-get install -y gh unzip jq
+
+          # Get the latest release from au-fhir-test-data-utils
+          LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
+
+          # Debug: Print the release tag
+          echo "Latest Release Tag: $LATEST_RELEASE"
+
+          # Debug: Print the entire release JSON
+          echo "Full Release JSON:"
+          gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE
+
+          # Debug: Print the assets array JSON
+          echo "Assets Array JSON:"
+          gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq '.assets'
+
+          # Find the Linux zip asset URL (CORRECTED filter - ADJUST THIS!)
+          ASSET_URL=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq -r '.assets[] | select(.name == "TestDataClient-linux-x64.zip") | .browser_download_url')
+
+          # Debug: Print the Asset URL
+          echo "Asset URL: $ASSET_URL"
+
+          # Check if an asset URL was found
+          if [ -z "$ASSET_URL" ]; then
+            echo "Error: No Linux zip found in the latest release ($LATEST_RELEASE)"
+            exit 1
+          fi
+
+          # Download the zip
+          wget "$ASSET_URL" -O TestDataClient.zip  # Quoted
+
+          # Create a directory for extraction
+          mkdir TestDataClientDir
+
+          # Extract the zip
+          unzip TestDataClient.zip -d TestDataClientDir
+
+          # Make the executable inside the zip executable (assuming it's in the 'TestDataClient-linux-x64-binaries' subdirectory)
+          chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
+
+          # Construct absolute directory path
+          #DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
+
+          # Debug: Print the command
+          echo "Executing: ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory $DATA_DIR"
+
+          # Define the resource types
+          items=("Patient" "HealthcareService" "Organization" "Location" "Practitioner" "PractitionerRole" "RelatedPerson" "Encounter" "AllergyIntolerance" "Condition" "Immunization" "Procedure" "Observation" "Medication" "MedicationRequest" "MedicationStatement" "Coverage" "Specimen" "CommunicationRequest" "Consent" "ServiceRequest" "Task")
+
+          # Loop through each resource type and call TestDataClient
+          for item in "${items[@]}"; do
+            echo "Loading data for: $item"
+            "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "$item" "$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/" "http://localhost:8080/fhir" "basic" "default"
+          done
+
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+     # NEW: Clone Inferno TestKit
+      - name: Clone Inferno TestKit
+        run: |
+          git clone ${{ env.TESTKIT_REPO }} inferno;
+          cd inferno;
+          pwd
+
+      - name: Verify Test Data Loaded (Example, adjust as needed)
+        run: |
+          curl http://localhost:8080/fhir/Patient
