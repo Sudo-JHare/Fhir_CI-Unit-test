@@ -9,25 +9,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Install Ruby (Example using rbenv/ruby-build) ---
-# Clone rbenv and ruby-build for the root user (or adjust user if needed)
+
+# --- NEW: Install Ruby build dependencies FIRST ---
+# Includes build-essential (already added earlier), zlib1g-dev (for zlib ext),
+# libssl-dev (for openssl ext), libreadline-dev (for readline ext), etc.
+# Also include ca-certificates here.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl-dev libreadline-dev zlib1g-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone rbenv and ruby-build for the root user
 RUN git clone https://github.com/rbenv/rbenv.git /root/.rbenv
 RUN git clone https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build
 
 # Add rbenv's bin and shims directories to the PATH Environment Variable
-# This makes 'rbenv' command available for subsequent RUN steps and in the final container
 ENV PATH="/root/.rbenv/bin:/root/.rbenv/shims:${PATH}"
 
 # Specify the Ruby version required by your Inferno version & install
-# Now 'rbenv' command should be found because it's in the PATH
+# Now zlib1g-dev is present, so the zlib extension should build correctly.
 RUN rbenv install 3.1.2
 RUN rbenv global 3.1.2
 
 # Verify installation (optional but recommended)
 RUN ruby -v
 RUN which ruby
+# Optional: Verify zlib extension loaded
+RUN ruby -e "require 'zlib'; puts Zlib::ZLIB_VERSION"
 
-# Install bundler using the installed Ruby's gem
-RUN gem install bundler
+# Update RubyGems system and install Bundler
+RUN gem update --system --no-document
+RUN gem install bundler --no-document
+
 # Update rbenv shims after installing gems with executables
 RUN rbenv rehash
 
