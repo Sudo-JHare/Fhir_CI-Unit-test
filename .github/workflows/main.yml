@@ -45,7 +45,7 @@ jobs:
       - name: Start HAPI FHIR Server
         run: |
           docker pull hapiproject/hapi:latest
-          docker run -d -p 8080:8080 hapiproject/hapi:latest
+          docker run -d --name HAPI_SERV -p 8080:8080 hapiproject/hapi:latest
           echo "Waiting for HAPI FHIR server to be ready..."
 
       - name: Wait for HAPI FHIR Server to start
@@ -152,14 +152,14 @@ jobs:
           echo "Placeholder: Database setup command"
           ls -la
 
-      - name: Verify Test Data Loaded (Example, adjust as needed)
-        run: |
-          curl http://localhost:8080/fhir/Patient
+      #- name: Verify Test Data Loaded (Example, adjust as needed)
+      #  run: |
+      #    curl http://localhost:8080/fhir/Patient
 
       # NEW\: Execute Inferno Tests
-      #- name: Execute Inferno Tests
-      #  run: |
-      #    cd inferno
-      #    docker compose run inferno bundle exec inferno execute --suite au_core_v110_preview --inputs "url:http://localhost:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
+      - name: Execute Inferno Tests
+        run: |
+          cd inferno
+          docker compose run inferno bundle exec inferno execute --suite au_core_v110_preview --inputs "url:http://HAPI_SERV:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
 
       
