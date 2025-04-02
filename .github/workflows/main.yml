@@ -41,19 +41,18 @@ jobs:
           echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
           echo "TERMINOLOGY_SERVER: ${{ env.TERMINOLOGY_SERVER }}"
           echo "TESTKIT_REPO: ${{ env.TESTKIT_REP }}"
+          docker network create CITestnet
 
       - name: Start HAPI FHIR Server
         run: |
           docker pull hapiproject/hapi:latest
-          docker run -d --name HAPI_SERV -p 0.0.0.0:8080:8080 hapiproject/hapi:latest
+          docker run -d --name HAPI_SERV --network CITestnet -p 0.0.0.0:8080:8080 hapiproject/hapi:latest
           echo "Waiting for HAPI FHIR server to be ready..."
           docker ps
 
       - name: Add hosts to /etc/hosts
         run: |
-          sudo echo "127.0.0.1 HAPI_SERV" | sudo tee -a /etc/hosts
-          sudo echo "localhost HAPI_SERV" | sudo tee -a /etc/hosts
-          sudo echo "0.0.0.0 HAPI_SERV" | sudo tee -a /etc/hosts
+          sudo sh -c 'echo "127.0.0.1 HAPI_SERV" >> /etc/hosts'
           
 
       - name: Wait for HAPI FHIR Server to start
@@ -168,6 +167,6 @@ jobs:
       - name: Execute Inferno Tests
         run: |
           cd inferno
-          docker compose run inferno bundle exec inferno execute --suite au_core_v110_preview --inputs "url:HAPI_SERV:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
+          docker compose run inferno bundle exec inferno execute --network CITestnet --suite au_core_v110_preview --inputs "url:HAPI_SERV:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
 
       
