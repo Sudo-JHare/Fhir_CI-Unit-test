@@ -148,7 +148,7 @@ jobs:
       - name: Set up Inferno Database
         run: |
           cd inferno
-          docker-compose run inferno bundle exec rake db:create db:migrate
+          docker compose run inferno bundle exec rake db:create db:migrate
           echo "Placeholder: Database setup command"
           ls -la
 
