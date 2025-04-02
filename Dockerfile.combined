@@ -14,9 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Includes build-essential (already added earlier), zlib1g-dev (for zlib ext),
 # libssl-dev (for openssl ext), libreadline-dev (for readline ext), etc.
 # Also include ca-certificates here.
+# Added libffi-dev and libyaml-dev for Ruby 3.3.x extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl-dev libreadline-dev zlib1g-dev ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    libssl-dev libreadline-dev zlib1g-dev ca-certificates libffi-dev libyaml-dev \
+    && rm -rf /var/lib/apt/lists/* # <-- Added packages here
 
 # Clone rbenv and ruby-build for the root user
 RUN git clone https://github.com/rbenv/rbenv.git /root/.rbenv
