@@ -144,6 +144,14 @@ jobs:
           cd inferno;
           pwd
 
-      - name: Verify Test Data Loaded (Example, adjust as needed)
+      #- name: Verify Test Data Loaded (Example, adjust as needed)
+      #  run: |
+      #    curl http://localhost:8080/fhir/Patient
+
+      # NEW\: Execute Inferno Tests
+      - name: Execute Inferno Tests
         run: |
-          curl http://localhost:8080/fhir/Patient
+          cd inferno
+          docker compose run inferno bundle exec inferno execute --suite au_core_v110_preview --inputs "url:http://10.39.88.79:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
+
+      
