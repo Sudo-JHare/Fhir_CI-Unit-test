@@ -156,7 +156,7 @@ jobs:
       #  run: |
       #    curl http://HAPI_SERV:8080/fhir/Patient
 
-       NEW\: Execute Inferno Tests
+      # NEW\: Execute Inferno Tests
       - name: Execute Inferno Tests
         run: |
           cd inferno
