@@ -130,8 +130,8 @@ jobs:
       - name: Execute Inferno Tests (inside container)
         run: |
           # Use docker exec. Target HAPI at http://localhost:8080/fhir as it's inside the same container.
-          # No need for --network CITestnet anymore.
-          docker exec combined-server bash -c "cd /app && \
+          # Set VALIDATOR_URL env var to use HAPI FHIR endpoint for validation as internal validator integration is complex in this setup.
+          docker exec -e VALIDATOR_URL='http://localhost:8080/fhir' combined-server bash -c "cd /app && \
             bundle exec inferno execute \
             --suite au_core_v110_preview \
             --inputs \"url:http://localhost:8080/fhir\" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp \
