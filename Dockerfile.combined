@@ -1,43 +1,74 @@
+# Choose a suitable base image (e.g., Ubuntu)
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
 # --- Install Common Dependencies ---
-# Added redis-server
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl wget git build-essential libpq-dev libsqlite3-dev nodejs npm openjdk-17-jdk maven redis-server \
     && rm -rf /var/lib/apt/lists/* # Removed yarn here previously
 
 # Install Yarn using npm to get a more recent version
-RUN npm install -g yarn
+RUN npm install -g yarn # <-- Add this line
 
 # --- Install Ruby (Example using rbenv/ruby-build) ---
-# ... (Ruby installation steps remain the same) ...
 
-# --- Setup HAPI FHIR (Build from Starter Project) ---
-# <<< --- REMOVE TOMCAT INSTALL/REINSTALL LINES --- >>>
-# The following lines related to apt-get installing tomcat9 should be deleted:
-# RUN apt-get update && apt-get install -y --no-install-recommends tomcat9 && rm -rf /var/lib/apt/lists/*
-# RUN apt-get update && apt-get remove -y tomcat9 && apt-get install -y --no-install-recommends tomcat9 \
-#    && rm -rf /var/lib/apt/lists/*
+# --- NEW: Install Ruby build dependencies FIRST ---
+# Includes build-essential (already added earlier), zlib1g-dev (for zlib ext),
+# libssl-dev (for openssl ext), libreadline-dev (for readline ext), etc.
+# Also include ca-certificates here.
+# Added libffi-dev and libyaml-dev for Ruby 3.3.x extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl-dev libreadline-dev zlib1g-dev ca-certificates libffi-dev libyaml-dev \
+    && rm -rf /var/lib/apt/lists/* # <-- Added packages here
 
-# Clone the HAPI FHIR Starter project (remains the same)
+# Clone rbenv and ruby-build for the root user
+RUN git clone https://github.com/rbenv/rbenv.git /root/.rbenv
+RUN git clone https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build
+
+# Add rbenv's bin and shims directories to the PATH Environment Variable
+ENV PATH="/root/.rbenv/bin:/root/.rbenv/shims:${PATH}"
+
+# Specify the Ruby version required by your Inferno version & install
+# Now zlib1g-dev is present, so the zlib extension should build correctly.
+RUN rbenv install 3.3.6
+RUN rbenv global 3.3.6
+
+# Verify installation (optional but recommended)
+RUN ruby -v
+RUN which ruby
+# Optional: Verify zlib extension loaded
+RUN ruby -e "require 'zlib'; puts Zlib::ZLIB_VERSION"
+
+# Update RubyGems system and install Bundler
+RUN gem update --system --no-document
+RUN gem install bundler --no-document
+
+# Update rbenv shims after installing gems with executables
+RUN rbenv rehash
+
+# Clone the HAPI FHIR Starter project
+# (Consider cloning a specific tag/release if needed, e.g., -b v6.10.1)
 RUN git clone https://github.com/hapifhir/hapi-fhir-jpaserver-starter.git /tmp/hapi-starter
 
-# Build the WAR/JAR file using Maven (remains the same)
+# Build the WAR file using Maven (Maven was installed earlier)
+# Skipping tests (-DskipTests) speeds up the build significantly
 RUN cd /tmp/hapi-starter && mvn package -DskipTests
 
-# <<< --- REMOVE THIS WAR COPY LINE --- >>>
-# RUN cp /tmp/hapi-starter/target/ROOT.war /var/lib/tomcat9/webapps/fhir.war
-# We will run the built artifact directly
-
-# Clean up the cloned repo and build artifacts (Optional, remains the same)
-# RUN rm -rf /tmp/hapi-starter
+# Clean up the cloned repo and build artifacts (optional, saves space)
+RUN rm -rf /tmp/hapi-starter
 
 # --- Setup Inferno ---
-# ... (Inferno setup, including db:migrate, remains the same) ...
 WORKDIR /app
+# Clone Inferno (or COPY if preferred) - Use the specific repo URL from your env vars
 ARG TESTKIT_REPO_URL
 RUN git clone ${TESTKIT_REPO_URL} .
+# Install Inferno Ruby dependencies
 RUN bundle config set --local without 'development test'
 RUN bundle install --jobs 4 --retry 3
+# Install Inferno JavaScript dependencies
 RUN yarn install --frozen-lockfile
+# Run Inferno database migrations
 RUN cd /app && bundle exec rake db:migrate
 
 # --- Setup Process Manager (Example: supervisord) ---
@@ -45,10 +76,10 @@ RUN cd /app && bundle exec rake db:migrate
 RUN apt-get update && apt-get install -y --no-install-recommends supervisor && rm -rf /var/lib/apt/lists/*
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Expose ports (remains the same)
+# Expose ports (HAPI's default, Inferno's default - adjust if needed)
 EXPOSE 8080
 EXPOSE 4567
 
 # --- Entrypoint/CMD ---
-# (CMD remains the same - supervisord handles startup)
+# Use supervisord to manage both Tomcat (for HAPI) and Inferno processes
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
