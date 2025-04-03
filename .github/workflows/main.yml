@@ -138,8 +138,9 @@ jobs:
             --outputter json > /tmp/inferno_results.json" # Output to a temp file inside container
 
       - name: Copy Inferno Results
+        if: always() # <<< --- ADD THIS CONDITION --- >>>
         run: |
           # Copy results back from the container to the runner workspace
           docker cp combined-server:/tmp/inferno_results.json ./inferno_results.json
           echo "Inferno results copied."
-          cat inferno_results.json # Optional: display results in log
+          cat inferno_results.json # Make sure this line is uncommented if you want to see results directly in logs
