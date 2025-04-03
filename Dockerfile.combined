@@ -51,6 +51,10 @@ RUN rbenv rehash
 # Install Tomcat (adjust version as needed)
 RUN apt-get update && apt-get install -y --no-install-recommends tomcat9 && rm -rf /var/lib/apt/lists/*
 
+# Attempt to fix potential Tomcat configuration issues by reinstalling
+RUN apt-get update && apt-get remove -y tomcat9 && apt-get install -y --no-install-recommends tomcat9 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Clone the HAPI FHIR Starter project
 # (Consider cloning a specific tag/release if needed, e.g., -b v6.10.1)
 RUN git clone https://github.com/hapifhir/hapi-fhir-jpaserver-starter.git /tmp/hapi-starter
@@ -79,6 +83,8 @@ RUN bundle config set --local without 'development test'
 RUN bundle install --jobs 4 --retry 3
 # Install Inferno JavaScript dependencies
 RUN yarn install --frozen-lockfile
+# Run Inferno database migrations
+RUN cd /app && bundle exec rake db:migrate
 
 # --- Setup Process Manager (Example: supervisord) ---
 RUN apt-get update && apt-get install -y --no-install-recommends supervisor && rm -rf /var/lib/apt/lists/*
