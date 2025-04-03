@@ -1,4 +1,4 @@
-name: Deploy HAPI FHIR Server, Load IG and Test Data
+name: Deploy Combined HAPI FHIR Server and Inferno, Load IG and Test Data
 
 on:
   push:
@@ -10,25 +10,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy_and_load:
+  build_run_and_test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '17' ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        # Ensure the Dockerfile.combined and supervisord.conf are checked out
 
-      - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: 'temurin'
+      # No Java setup needed on the runner if building in Docker
+      # - name: Set up JDK ${{ matrix.java }} ...
 
       - name: Load Configuration
         id: load-config
         run: |
-          # Read the config.properties file and create an environment file
           echo "Loading configuration from config.properties"
           while IFS='=' read -r key value; do
             echo "$key=$value" >> $GITHUB_ENV
@@ -38,128 +32,115 @@ jobs:
         run: |
           echo "IG_PACKAGE_ID: ${{ env.IG_PACKAGE_ID }}"
           echo "IG_PACKAGE_VERSION: ${{ env.IG_PACKAGE_VERSION }}"
-          echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}"
+          # HAPI_SERVER is now localhost inside the container
+          # echo "HAPI_SERVER: ${{ env.HAPI_SERVER }}" # Likely not needed externally
           echo "TERMINOLOGY_SERVER: ${{ env.TERMINOLOGY_SERVER }}"
           echo "TESTKIT_REPO: ${{ env.TESTKIT_REP }}"
+          # No separate docker network needed if running in one container
+          # docker network create CITestnet
 
-      - name: Start HAPI FHIR Server
+      - name: Build Combined HAPI and Inferno Image
         run: |
-          docker pull hapiproject/hapi:latest
-          docker run -d -p 8080:8080 hapiproject/hapi:latest
-          echo "Waiting for HAPI FHIR server to be ready..."
+          # Pass TESTKIT_REPO as a build argument to Dockerfile
+          docker build . -f Dockerfile.combined -t hapi-inferno-combined --build-arg TESTKIT_REPO_URL=${{ env.TESTKIT_REPO }}
 
-      - name: Wait for HAPI FHIR Server to start
+      - name: Run Combined Container
         run: |
+          # Run in detached mode, map ports
+          # Use a predictable name like 'combined-server'
+          docker run -d --name combined-server -p 8080:8080 -p 4567:4567 hapi-inferno-combined
+          echo "Waiting for Combined Container to start..."
+          docker ps
+
+      # --- NEW STEP TO CAPTURE LOGS ---
+      - name: Show container logs for debugging
+        run: |
+          echo "Waiting a bit for logs to generate..."
+          sleep 20 # Wait 20 seconds for services to attempt startup
+          echo "Attempting to capture logs from combined-server:"
+          docker logs combined-server
+      # --- END OF NEW STEP ---
+
+      - name: Wait for HAPI FHIR Server within Container to start
+        run: |
+          # Check HAPI on the mapped port 8080 on the runner's localhost
+          # (This step might still time out, but the logs above are key)
           until curl --silent --fail http://localhost:8080/fhir/metadata; do
-            echo "Waiting..."
+            echo "Waiting for HAPI..."
             sleep 10
           done
-          echo "HAPI FHIR Server is running."
+          echo "HAPI FHIR Server is running within the container."
 
-      - name: Setup .NET SDK
+      - name: Wait for Inferno within Container to start
+        run: |
+          # Check Inferno on the mapped port 4567 on the runner's localhost
+          until curl --silent --fail http://localhost:4567; do # Adjust URL if Inferno has a specific health endpoint
+            echo "Waiting for Inferno..."
+            sleep 10
+          done
+          echo "Inferno is running within the container."
+
+      - name: Setup .NET SDK # For UploadFIG
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.0.x' # Specify the .NET version you need
+          dotnet-version: '9.0.x'
 
       - name: Install UploadFIG
-        run: |
-          dotnet tool install --global UploadFIG
+        run: dotnet tool install --global UploadFIG
 
-      - name: Upload IG using UploadFIG
+      - name: Upload IG using UploadFIG (Targeting HAPI inside container)
         run: |
-          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d ${{ env.HAPI_SERVER }} --includeReferencedDependencies -reg ${{ env.TERMINOLOGY_SERVER }}
+          # Target localhost:8080 as HAPI is mapped there
+          UploadFIG -pid ${{ env.IG_PACKAGE_ID }} -pv ${{ env.IG_PACKAGE_VERSION }} -d http://localhost:8080/fhir --includeReferencedDependencies -reg ${{ env.TERMINOLOGY_SERVER }}
 
+      # --- Test Data Loading (No change needed here, still targets mapped HAPI) ---
       - name: Clone Test Data
-        run: |
-          git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
+        run: git clone https://github.com/${{ env.TEST_DATA_REPO }}.git test_data
 
       - name: Load Test Data
+        # This step uses TestDataClient which targets http://localhost:8080/fhir
+        # It should work as before, targeting the HAPI instance inside the container via the mapped port.
         run: |
-          set -x  # Enable shell debugging
-
-          # Install GitHub CLI, unzip, and jq
-          sudo apt-get update
-          sudo apt-get install -y gh unzip jq
-
-          # Get the latest release from au-fhir-test-data-utils
+          set -x
+          sudo apt-get update && sudo apt-get install -y gh unzip jq
           LATEST_RELEASE=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases | jq -r '.[0].tag_name')
-
-          # Debug: Print the release tag
           echo "Latest Release Tag: $LATEST_RELEASE"
-
-          # Debug: Print the entire release JSON
-          echo "Full Release JSON:"
-          gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE
-
-          # Debug: Print the assets array JSON
-          echo "Assets Array JSON:"
-          gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq '.assets'
-
-          # Find the Linux zip asset URL (CORRECTED filter - ADJUST THIS!)
           ASSET_URL=$(gh api /repos/hl7au/au-fhir-test-data-utils/releases/tags/$LATEST_RELEASE | jq -r '.assets[] | select(.name == "TestDataClient-linux-x64.zip") | .browser_download_url')
-
-          # Debug: Print the Asset URL
           echo "Asset URL: $ASSET_URL"
-
-          # Check if an asset URL was found
-          if [ -z "$ASSET_URL" ]; then
-            echo "Error: No Linux zip found in the latest release ($LATEST_RELEASE)"
-            exit 1
-          fi
-
-          # Download the zip
-          wget "$ASSET_URL" -O TestDataClient.zip  # Quoted
-
-          # Create a directory for extraction
+          if [ -z "$ASSET_URL" ]; then echo "Error: No Linux zip found"; exit 1; fi
+          wget "$ASSET_URL" -O TestDataClient.zip
           mkdir TestDataClientDir
-
-          # Extract the zip
           unzip TestDataClient.zip -d TestDataClientDir
-
-          # Make the executable inside the zip executable (assuming it's in the 'TestDataClient-linux-x64-binaries' subdirectory)
           chmod +x TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient
-
-          # Construct absolute directory path
-          #DATA_DIR="$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/"
-
-          # Debug: Print the command
-          echo "Executing: ./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient --server http://localhost:8080/fhir --directory $DATA_DIR"
-
-          # Define the resource types
           items=("Patient" "HealthcareService" "Organization" "Location" "Practitioner" "PractitionerRole" "RelatedPerson" "Encounter" "AllergyIntolerance" "Condition" "Immunization" "Procedure" "Observation" "Medication" "MedicationRequest" "MedicationStatement" "Coverage" "Specimen" "CommunicationRequest" "Consent" "ServiceRequest" "Task")
-
-          # Loop through each resource type and call TestDataClient
           for item in "${items[@]}"; do
             echo "Loading data for: $item"
             "./TestDataClientDir/TestDataClient-linux-x64-binaries/TestDataClient" "$item" "$GITHUB_WORKSPACE/test_data/au-fhir-test-data-set/" "http://localhost:8080/fhir" "basic" "default"
           done
-
         env:
           GH_TOKEN: ${{ github.token }}
 
-     # NEW: Clone Inferno TestKit
-      - name: Clone Inferno TestKit
+      # --- Inferno DB Migration and Testing (Executed INSIDE the container) ---
+      - name: Set up Inferno Database (inside container)
         run: |
-          git clone ${{ env.TESTKIT_REPO }} inferno;
-          cd inferno;
-          pwd
+          # Use docker exec to run the command inside the running container
+          docker exec combined-server bash -c "cd /app && bundle exec rake db:migrate"
+          echo "Inferno database migration attempted."
 
-      # NEW: Set up Inferno Database
-      - name: Set up Inferno Database
+      - name: Execute Inferno Tests (inside container)
         run: |
-          cd inferno
-          docker compose run inferno bundle exec rake db:migrate
-          echo "Placeholder: Database setup command"
-          ls -la
+          # Use docker exec. Target HAPI at http://localhost:8080/fhir as it's inside the same container.
+          # Set VALIDATOR_URL env var to use HAPI FHIR endpoint for validation as internal validator integration is complex in this setup.
+          docker exec -e VALIDATOR_URL='http://localhost:8080/fhir' combined-server bash -c "cd /app && \
+            bundle exec inferno execute \
+            --suite au_core_v110_preview \
+            --inputs \"url:http://localhost:8080/fhir\" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp \
+            --outputter json > /tmp/inferno_results.json" # Output to a temp file inside container
 
-      - name: Verify Test Data Loaded (Example, adjust as needed)
+      - name: Copy Inferno Results
+        if: always() # <<< --- ADD THIS CONDITION --- >>>
         run: |
-          curl http://localhost:8080/fhir/Patient
-
-      # NEW\: Execute Inferno Tests
-      #- name: Execute Inferno Tests
-      #  run: |
-      #    cd inferno
-      #    docker compose run inferno bundle exec inferno execute --suite au_core_v110_preview --inputs "url:http://localhost:8080/fhir" patient_ids:baratz-toni,irvine-ronny-lawrence,italia-sofia,howe-deangelo,hayes-arianne,baby-banks-john,banks-mia-leanne location_ids:bobrester-medical-center,au-hospital organization_ids:dva-au,organization-medical-center-tc practitioner_ids:alderson-helene practitioner_role_ids:cardiologist-sallie-sutherland,bobrester-bob-gp --outputter json > inferno_results.json
-
-      
+          # Copy results back from the container to the runner workspace
+          docker cp combined-server:/tmp/inferno_results.json ./inferno_results.json
+          echo "Inferno results copied."
+          cat inferno_results.json # Make sure this line is uncommented if you want to see results directly in logs
