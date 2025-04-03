@@ -52,9 +52,19 @@ jobs:
           echo "Waiting for Combined Container to start..."
           docker ps
 
+      # --- NEW STEP TO CAPTURE LOGS ---
+      - name: Show container logs for debugging
+        run: |
+          echo "Waiting a bit for logs to generate..."
+          sleep 20 # Wait 20 seconds for services to attempt startup
+          echo "Attempting to capture logs from combined-server:"
+          docker logs combined-server
+      # --- END OF NEW STEP ---
+
       - name: Wait for HAPI FHIR Server within Container to start
         run: |
           # Check HAPI on the mapped port 8080 on the runner's localhost
+          # (This step might still time out, but the logs above are key)
           until curl --silent --fail http://localhost:8080/fhir/metadata; do
             echo "Waiting for HAPI..."
             sleep 10
